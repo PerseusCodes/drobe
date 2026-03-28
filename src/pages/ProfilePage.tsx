@@ -1,12 +1,13 @@
-import { User, Shirt, Sparkles, Trash2, Download, RotateCcw } from 'lucide-react'
-import type { ClothingItem, Outfit } from '../types'
+import { User, Shirt, Sparkles, Trash2, Download, RotateCcw, Recycle } from 'lucide-react'
+import type { ClothingItem, Outfit, Page } from '../types'
 
 interface Props {
   items: ClothingItem[]
   outfits: Outfit[]
+  onNavigate: (page: Page) => void
 }
 
-export default function ProfilePage({ items, outfits }: Props) {
+export default function ProfilePage({ items, outfits, onNavigate }: Props) {
   const totalWears = items.reduce((sum, i) => sum + i.timesWorn, 0)
   const topCategory = items.length
     ? Object.entries(
@@ -23,7 +24,7 @@ export default function ProfilePage({ items, outfits }: Props) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `drobe-backup-${new Date().toISOString().split('T')[0]}.json`
+    a.download = `my-closet-backup-${new Date().toISOString().split('T')[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -92,16 +93,7 @@ export default function ProfilePage({ items, outfits }: Props) {
             justifyContent: 'center',
           }}
         >
-          <span
-            style={{
-              fontFamily: 'var(--display)',
-              fontSize: '1.8rem',
-              fontWeight: 700,
-              color: 'white',
-            }}
-          >
-            D
-          </span>
+          <Shirt size={32} style={{ color: 'white' }} />
         </div>
         <h2 style={{ margin: 0 }}>My Closet</h2>
         <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
@@ -140,6 +132,39 @@ export default function ProfilePage({ items, outfits }: Props) {
           </span>
         </div>
       </div>
+
+      {/* Declutter shortcut */}
+      <button
+        className="profile-section"
+        onClick={() => onNavigate('declutter')}
+        style={{
+          width: '100%',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          textAlign: 'left',
+        }}
+      >
+        <div style={{
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          background: 'var(--accent-dim)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Recycle size={20} style={{ color: 'var(--accent)' }} />
+        </div>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '0.9rem' }}>Declutter</h3>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            Find items to donate or remove
+          </span>
+        </div>
+      </button>
 
       {/* Data management */}
       <div className="profile-section">

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Page } from './types'
 import { useWardrobe } from './hooks/useWardrobe'
 import BottomNav from './components/BottomNav'
+import TodayPage from './pages/TodayPage'
 import ClosetPage from './pages/ClosetPage'
 import ScanPage from './pages/ScanPage'
 import OutfitsPage from './pages/OutfitsPage'
@@ -9,11 +10,18 @@ import DeclutterPage from './pages/DeclutterPage'
 import ProfilePage from './pages/ProfilePage'
 
 export default function App() {
-  const [page, setPage] = useState<Page>('closet')
+  const [page, setPage] = useState<Page>('today')
   const wardrobe = useWardrobe()
 
   return (
     <>
+      {page === 'today' && (
+        <TodayPage
+          items={wardrobe.items}
+          savedOutfits={wardrobe.outfits}
+          onNavigate={setPage}
+        />
+      )}
       {page === 'closet' && (
         <ClosetPage
           items={wardrobe.items}
@@ -41,7 +49,11 @@ export default function App() {
         />
       )}
       {page === 'profile' && (
-        <ProfilePage items={wardrobe.items} outfits={wardrobe.outfits} />
+        <ProfilePage
+          items={wardrobe.items}
+          outfits={wardrobe.outfits}
+          onNavigate={setPage}
+        />
       )}
 
       <BottomNav current={page} onChange={setPage} />

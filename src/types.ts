@@ -38,4 +38,4 @@ export interface Outfit {
   saved: boolean
 }
 
-export type Page = 'closet' | 'outfits' | 'scan' | 'declutter' | 'profile'
+export type Page = 'today' | 'closet' | 'outfits' | 'scan' | 'declutter' | 'profile'

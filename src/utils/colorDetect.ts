@@ -1,36 +1,73 @@
-/** General color categories — no need for dark green vs light green */
-const COLOR_MAP: { name: string; hex: string; r: number; g: number; b: number }[] = [
-  { name: 'Black', hex: '#1A1A1A', r: 26, g: 26, b: 26 },
-  { name: 'White', hex: '#F5F5F5', r: 245, g: 245, b: 245 },
-  { name: 'Grey', hex: '#808080', r: 128, g: 128, b: 128 },
-  { name: 'Red', hex: '#DC2626', r: 220, g: 38, b: 38 },
-  { name: 'Pink', hex: '#EC4899', r: 236, g: 72, b: 153 },
-  { name: 'Orange', hex: '#F97316', r: 249, g: 115, b: 22 },
-  { name: 'Yellow', hex: '#EAB308', r: 234, g: 179, b: 8 },
-  { name: 'Green', hex: '#22C55E', r: 34, g: 197, b: 94 },
-  { name: 'Teal', hex: '#14B8A6', r: 20, g: 184, b: 166 },
-  { name: 'Blue', hex: '#3B82F6', r: 59, g: 130, b: 246 },
-  { name: 'Navy', hex: '#1E3A5F', r: 30, g: 58, b: 95 },
-  { name: 'Purple', hex: '#8B5CF6', r: 139, g: 92, b: 246 },
-  { name: 'Brown', hex: '#92400E', r: 146, g: 64, b: 14 },
-  { name: 'Beige', hex: '#D4B896', r: 212, g: 184, b: 150 },
+/** General color categories — uses HSL matching for lighting resilience */
+
+const COLOR_CATEGORIES = [
+  { name: 'Red',    hex: '#DC2626', hueMin: 345, hueMax: 15 },
+  { name: 'Orange', hex: '#F97316', hueMin: 15,  hueMax: 40 },
+  { name: 'Yellow', hex: '#EAB308', hueMin: 40,  hueMax: 65 },
+  { name: 'Green',  hex: '#22C55E', hueMin: 65,  hueMax: 170 },
+  { name: 'Teal',   hex: '#14B8A6', hueMin: 170, hueMax: 195 },
+  { name: 'Blue',   hex: '#3B82F6', hueMin: 195, hueMax: 255 },
+  { name: 'Purple', hex: '#8B5CF6', hueMin: 255, hueMax: 290 },
+  { name: 'Pink',   hex: '#EC4899', hueMin: 290, hueMax: 345 },
 ]
 
-function colorDistance(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
-  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  if (max === min) return [0, 0, l]
+
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  let h = 0
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60
+  else if (max === g) h = ((b - r) / d + 2) * 60
+  else h = ((r - g) / d + 4) * 60
+
+  return [h, s, l]
 }
 
-function nearestColor(r: number, g: number, b: number) {
-  let best = COLOR_MAP[0]
-  let bestDist = Infinity
-  for (const c of COLOR_MAP) {
-    const d = colorDistance(r, g, b, c.r, c.g, c.b)
-    if (d < bestDist) {
-      bestDist = d
-      best = c
+function classifyPixel(r: number, g: number, b: number): { name: string; hex: string } {
+  const [h, s, l] = rgbToHsl(r, g, b)
+
+  // Achromatic colors — classify by lightness, not hue
+  if (s < 0.12) {
+    if (l < 0.25) return { name: 'Black', hex: '#1A1A1A' }
+    if (l < 0.7)  return { name: 'Grey',  hex: '#808080' }
+    return { name: 'White', hex: '#F5F5F5' }
+  }
+
+  // Low saturation + warm hue = likely beige/brown/tan
+  if (s < 0.25 && l > 0.35 && l < 0.75) {
+    if (h >= 15 && h < 50) return { name: 'Beige', hex: '#D4B896' }
+  }
+
+  // Dark but saturated = the actual color, not black
+  // (this is the key fix for dark green showing as black)
+  if (l < 0.18 && s < 0.3) return { name: 'Black', hex: '#1A1A1A' }
+
+  // Brown: warm hue + dark + moderate saturation
+  if (h >= 10 && h < 45 && l < 0.35 && s >= 0.2) {
+    return { name: 'Brown', hex: '#92400E' }
+  }
+
+  // Navy: blue hue + very dark
+  if (h >= 195 && h < 255 && l < 0.25) {
+    return { name: 'Navy', hex: '#1E3A5F' }
+  }
+
+  // Match by hue to color categories
+  for (const cat of COLOR_CATEGORIES) {
+    if (cat.hueMin < cat.hueMax) {
+      // Normal range
+      if (h >= cat.hueMin && h < cat.hueMax) return { name: cat.name, hex: cat.hex }
+    } else {
+      // Wraps around 360 (Red: 345-360 and 0-15)
+      if (h >= cat.hueMin || h < cat.hueMax) return { name: cat.name, hex: cat.hex }
     }
   }
-  return best
+
+  return { name: 'Grey', hex: '#808080' }
 }
 
 export interface DetectedColor {
@@ -40,9 +77,9 @@ export interface DetectedColor {
 }
 
 /**
- * Analyze an image and return the dominant general color categories.
- * Samples a grid of pixels, maps each to the nearest named color,
- * and returns colors making up at least 10% of the sampled area.
+ * Analyze an image and return dominant color categories.
+ * Uses HSL-based matching which is much more resilient to lighting conditions.
+ * Skips extreme shadows and highlights to focus on actual garment color.
  */
 export function detectColors(imageUrl: string): Promise<DetectedColor[]> {
   return new Promise((resolve) => {
@@ -50,14 +87,14 @@ export function detectColors(imageUrl: string): Promise<DetectedColor[]> {
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       const canvas = document.createElement('canvas')
-      const size = 100 // sample at 100x100 resolution
+      const size = 100
       canvas.width = size
       canvas.height = size
       const ctx = canvas.getContext('2d')!
       ctx.drawImage(img, 0, 0, size, size)
 
-      // Sample a center-weighted region (avoid background edges)
-      const margin = Math.floor(size * 0.15)
+      // Sample center region (avoid background at edges)
+      const margin = Math.floor(size * 0.18)
       const sampleW = size - margin * 2
       const sampleH = size - margin * 2
       const data = ctx.getImageData(margin, margin, sampleW, sampleH).data
@@ -67,9 +104,13 @@ export function detectColors(imageUrl: string): Promise<DetectedColor[]> {
 
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3]
-        if (a < 128) continue // skip transparent pixels
+        if (a < 128) continue
 
-        const match = nearestColor(r, g, b)
+        // Skip extreme highlights and deep shadows — these are lighting artifacts
+        const [, , l] = rgbToHsl(r, g, b)
+        if (l < 0.05 || l > 0.97) continue
+
+        const match = classifyPixel(r, g, b)
         if (!counts[match.name]) {
           counts[match.name] = { name: match.name, hex: match.hex, count: 0 }
         }

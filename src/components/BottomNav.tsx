@@ -1,4 +1,4 @@
-import { Shirt, Sparkles, Camera, Recycle, User } from 'lucide-react'
+import { Home, Shirt, Camera, Sparkles, User } from 'lucide-react'
 import type { Page } from '../types'
 
 interface Props {
@@ -7,10 +7,10 @@ interface Props {
 }
 
 const tabs: { id: Page; label: string; icon: typeof Shirt }[] = [
+  { id: 'today', label: 'Today', icon: Home },
   { id: 'closet', label: 'Closet', icon: Shirt },
-  { id: 'outfits', label: 'Outfits', icon: Sparkles },
   { id: 'scan', label: 'Scan', icon: Camera },
-  { id: 'declutter', label: 'Declutter', icon: Recycle },
+  { id: 'outfits', label: 'Outfits', icon: Sparkles },
   { id: 'profile', label: 'Profile', icon: User },
 ]
 
