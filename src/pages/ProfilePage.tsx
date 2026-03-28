@@ -86,7 +86,7 @@ export default function ProfilePage({ items, outfits }: Props) {
             width: 72,
             height: 72,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--accent), #6D28D9)',
+            background: 'var(--accent)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

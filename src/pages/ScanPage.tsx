@@ -1,28 +1,12 @@
-import { useState, useRef } from 'react'
-import { Camera, Upload, Plus, Image } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Camera, Image as ImageIcon, Plus, Loader } from 'lucide-react'
 import type { ClothingItem, Category, Season, Occasion } from '../types'
+import { detectColors, getPrimaryColor, type DetectedColor } from '../utils/colorDetect'
 
 interface Props {
   onAdd: (item: ClothingItem) => void
   onNavigate: (page: 'closet') => void
 }
-
-const COLORS = [
-  { name: 'Black', hex: '#1A1A1A' },
-  { name: 'White', hex: '#F5F5F5' },
-  { name: 'Grey', hex: '#808080' },
-  { name: 'Navy', hex: '#1B2A4A' },
-  { name: 'Blue', hex: '#3B82F6' },
-  { name: 'Red', hex: '#EF4444' },
-  { name: 'Pink', hex: '#EC4899' },
-  { name: 'Green', hex: '#22C55E' },
-  { name: 'Brown', hex: '#92400E' },
-  { name: 'Beige', hex: '#D4B896' },
-  { name: 'Purple', hex: '#8B5CF6' },
-  { name: 'Orange', hex: '#F97316' },
-  { name: 'Yellow', hex: '#EAB308' },
-  { name: 'Teal', hex: '#14B8A6' },
-]
 
 const CATEGORIES: Category[] = ['tops', 'bottoms', 'outerwear', 'dresses', 'shoes', 'accessories', 'activewear']
 const SEASONS: Season[] = ['spring', 'summer', 'fall', 'winter', 'all']
@@ -33,14 +17,29 @@ function uid(): string {
 }
 
 export default function ScanPage({ onAdd, onNavigate }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const [imageUrl, setImageUrl] = useState('')
   const [name, setName] = useState('')
   const [category, setCategory] = useState<Category>('tops')
-  const [color, setColor] = useState(COLORS[0])
   const [seasons, setSeasons] = useState<Season[]>(['all'])
   const [occasions, setOccasions] = useState<Occasion[]>(['casual'])
   const [brand, setBrand] = useState('')
+  const [detectedColors, setDetectedColors] = useState<DetectedColor[]>([])
+  const [detecting, setDetecting] = useState(false)
+
+  // Auto-detect colors when image changes
+  useEffect(() => {
+    if (!imageUrl) {
+      setDetectedColors([])
+      return
+    }
+    setDetecting(true)
+    detectColors(imageUrl).then(colors => {
+      setDetectedColors(colors)
+      setDetecting(false)
+    })
+  }, [imageUrl])
 
   const toggleSeason = (s: Season) => {
     if (s === 'all') {
@@ -70,12 +69,14 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
   const handleSubmit = () => {
     if (!name.trim()) return
 
+    const primary = getPrimaryColor(detectedColors)
+
     const item: ClothingItem = {
       id: uid(),
       name: name.trim(),
       category,
-      color: color.hex,
-      colorName: color.name,
+      color: primary.hex,
+      colorName: detectedColors.map(c => c.name).join(', ') || primary.name,
       season: seasons.length ? seasons : ['all'],
       occasions: occasions.length ? occasions : ['casual'],
       imageUrl,
@@ -97,59 +98,81 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
         </h1>
       </div>
 
-      {/* Image upload zone */}
-      <div
-        className="scan-zone"
-        onClick={() => fileRef.current?.click()}
-        onDragOver={e => {
-          e.preventDefault()
-          e.currentTarget.classList.add('dragover')
-        }}
-        onDragLeave={e => e.currentTarget.classList.remove('dragover')}
-        onDrop={e => {
-          e.preventDefault()
-          e.currentTarget.classList.remove('dragover')
-          const file = e.dataTransfer.files[0]
-          if (file) handleFile(file)
-        }}
-      >
-        {imageUrl ? (
-          <img className="scan-preview" src={imageUrl} alt="Preview" />
-        ) : (
-          <>
+      {/* Image upload — two separate buttons for iOS Safari */}
+      {!imageUrl ? (
+        <div className="upload-buttons">
+          <button className="upload-btn" onClick={() => cameraRef.current?.click()}>
             <Camera />
-            <p>Tap to take a photo or upload</p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <span className="chip">
-                <Camera size={14} /> Camera
-              </span>
-              <span className="chip">
-                <Upload size={14} /> Gallery
-              </span>
-            </div>
-          </>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={e => {
-            const file = e.target.files?.[0]
-            if (file) handleFile(file)
-          }}
-        />
-      </div>
+            <span>Camera</span>
+          </button>
+          <button className="upload-btn" onClick={() => galleryRef.current?.click()}>
+            <ImageIcon />
+            <span>Gallery</span>
+          </button>
 
-      {/* Quick add without photo */}
-      {!imageUrl && (
-        <button
-          className="btn btn-ghost btn-full"
-          style={{ marginTop: 8, fontSize: '0.82rem' }}
-          onClick={() => {}}
-        >
-          <Image size={16} /> Continue without photo
-        </button>
+          {/* Hidden inputs — separate for camera vs gallery */}
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) handleFile(file)
+            }}
+          />
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) handleFile(file)
+            }}
+          />
+        </div>
+      ) : (
+        <div className="scan-zone" onClick={() => galleryRef.current?.click()}>
+          <img className="scan-preview" src={imageUrl} alt="Preview" />
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) handleFile(file)
+            }}
+          />
+        </div>
+      )}
+
+      {/* Detected colors */}
+      {imageUrl && (
+        <div style={{ marginTop: 14 }}>
+          <div className="section-label">Detected Colors</div>
+          {detecting ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              Analyzing colors...
+            </div>
+          ) : detectedColors.length > 0 ? (
+            <div className="detected-colors">
+              {detectedColors.map(c => (
+                <div className="detected-color" key={c.name}>
+                  <span className="color-dot" style={{ background: c.hex }} />
+                  {c.name} ({c.percentage}%)
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Could not detect colors
+            </p>
+          )}
+        </div>
       )}
 
       {/* Form */}
@@ -173,21 +196,6 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
               </option>
             ))}
           </select>
-        </div>
-
-        <div className="field">
-          <label>Color</label>
-          <div className="color-grid">
-            {COLORS.map(c => (
-              <div
-                key={c.hex}
-                className={`color-swatch ${color.hex === c.hex ? 'selected' : ''}`}
-                style={{ background: c.hex }}
-                onClick={() => setColor(c)}
-                title={c.name}
-              />
-            ))}
-          </div>
         </div>
 
         <div className="field">
@@ -239,6 +247,12 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
           <Plus size={18} /> Add to Closet
         </button>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }
