@@ -1,15 +1,25 @@
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Image as ImageIcon, Plus, Loader } from 'lucide-react'
-import type { ClothingItem, Category, Season, Occasion } from '../types'
+import { Camera, Image as ImageIcon, Plus, Loader, Tag } from 'lucide-react'
+import type { ClothingItem, Category, Season, Occasion, Fabric } from '../types'
 import { detectColors, getPrimaryColor, type DetectedColor } from '../utils/colorDetect'
 import { resizeImage } from '../utils/imageResize'
+import { ALL_FABRICS } from '../utils/careInstructions'
 
 interface Props {
   onAdd: (item: ClothingItem) => void
   onNavigate: (page: 'closet') => void
 }
 
-const CATEGORIES: Category[] = ['tops', 'bottoms', 'outerwear', 'dresses', 'shoes', 'accessories', 'activewear']
+const CATEGORIES: { id: Category; label: string }[] = [
+  { id: 'tops', label: 'Tops' },
+  { id: 'bottoms', label: 'Bottoms' },
+  { id: 'outerwear', label: 'Outerwear' },
+  { id: 'dresses', label: 'Dresses' },
+  { id: 'shoes', label: 'Shoes' },
+  { id: 'accessories', label: 'Accessories' },
+  { id: 'activewear', label: 'Activewear' },
+]
+
 const SEASONS: Season[] = ['spring', 'summer', 'fall', 'winter', 'all']
 const OCCASIONS: Occasion[] = ['casual', 'work', 'formal', 'athletic', 'night-out', 'date']
 
@@ -17,15 +27,31 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 }
 
+function buildSuggestedName(colors: DetectedColor[], category: Category): string {
+  const colorPart = colors.length > 0 ? colors[0].name : ''
+  const catLabel = CATEGORIES.find(c => c.id === category)?.label ?? ''
+  // Singularize the category label
+  const singular = catLabel.endsWith('s') && catLabel !== 'Dress'
+    ? catLabel.slice(0, -1)
+    : catLabel === 'Dresses' ? 'Dress' : catLabel
+  return colorPart ? `${colorPart} ${singular}` : singular
+}
+
 export default function ScanPage({ onAdd, onNavigate }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
+  const labelCameraRef = useRef<HTMLInputElement>(null)
+  const labelGalleryRef = useRef<HTMLInputElement>(null)
+
   const [imageUrl, setImageUrl] = useState('')
+  const [labelImageUrl, setLabelImageUrl] = useState('')
   const [name, setName] = useState('')
+  const [nameWasEdited, setNameWasEdited] = useState(false)
   const [category, setCategory] = useState<Category>('tops')
   const [seasons, setSeasons] = useState<Season[]>(['all'])
   const [occasions, setOccasions] = useState<Occasion[]>(['casual'])
   const [brand, setBrand] = useState('')
+  const [fabrics, setFabrics] = useState<Fabric[]>([])
   const [detectedColors, setDetectedColors] = useState<DetectedColor[]>([])
   const [detecting, setDetecting] = useState(false)
 
@@ -42,16 +68,18 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
     })
   }, [imageUrl])
 
-  const toggleSeason = (s: Season) => {
-    if (s === 'all') {
-      setSeasons(['all'])
-      return
+  // Auto-suggest name when colors or category change (unless user manually edited)
+  useEffect(() => {
+    if (!nameWasEdited) {
+      setName(buildSuggestedName(detectedColors, category))
     }
+  }, [detectedColors, category, nameWasEdited])
+
+  const toggleSeason = (s: Season) => {
+    if (s === 'all') { setSeasons(['all']); return }
     setSeasons(prev => {
       const without = prev.filter(x => x !== 'all')
-      return without.includes(s)
-        ? without.filter(x => x !== s)
-        : [...without, s]
+      return without.includes(s) ? without.filter(x => x !== s) : [...without, s]
     })
   }
 
@@ -61,13 +89,18 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
     )
   }
 
-  const handleFile = (file: File) => {
+  const toggleFabric = (f: Fabric) => {
+    setFabrics(prev =>
+      prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]
+    )
+  }
+
+  const handleFile = (file: File, setter: (url: string) => void) => {
     const reader = new FileReader()
     reader.onload = async () => {
       const raw = reader.result as string
-      // Resize to 400px max and compress to JPEG to fit in localStorage
       const compressed = await resizeImage(raw, 400)
-      setImageUrl(compressed)
+      setter(compressed)
     }
     reader.readAsDataURL(file)
   }
@@ -86,6 +119,8 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
       season: seasons.length ? seasons : ['all'],
       occasions: occasions.length ? occasions : ['casual'],
       imageUrl,
+      labelImageUrl: labelImageUrl || undefined,
+      fabrics: fabrics.length ? fabrics : undefined,
       brand: brand.trim() || undefined,
       dateAdded: new Date().toISOString().split('T')[0],
       timesWorn: 0,
@@ -104,7 +139,8 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
         </h1>
       </div>
 
-      {/* Image upload — two separate buttons for iOS Safari */}
+      {/* Item photo */}
+      <div className="section-label">Item Photo</div>
       {!imageUrl ? (
         <div className="upload-buttons">
           <button className="upload-btn" onClick={() => cameraRef.current?.click()}>
@@ -115,8 +151,6 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
             <ImageIcon />
             <span>Gallery</span>
           </button>
-
-          {/* Hidden inputs — separate for camera vs gallery */}
           <input
             ref={cameraRef}
             type="file"
@@ -125,7 +159,7 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
             style={{ display: 'none' }}
             onChange={e => {
               const file = e.target.files?.[0]
-              if (file) handleFile(file)
+              if (file) handleFile(file, setImageUrl)
             }}
           />
           <input
@@ -135,30 +169,36 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
             style={{ display: 'none' }}
             onChange={e => {
               const file = e.target.files?.[0]
-              if (file) handleFile(file)
+              if (file) handleFile(file, setImageUrl)
             }}
           />
         </div>
       ) : (
-        <div className="scan-zone" onClick={() => galleryRef.current?.click()}>
-          <img className="scan-preview" src={imageUrl} alt="Preview" />
-          <input
-            ref={galleryRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={e => {
-              const file = e.target.files?.[0]
-              if (file) handleFile(file)
+        <div style={{ position: 'relative' }}>
+          <img
+            src={imageUrl}
+            alt="Item preview"
+            style={{
+              width: '100%',
+              height: 200,
+              objectFit: 'cover',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
             }}
           />
+          <button
+            className="btn btn-ghost"
+            style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(255,255,255,0.85)', borderRadius: 20, fontSize: '0.78rem' }}
+            onClick={() => { setImageUrl(''); setDetectedColors([]) }}
+          >
+            Change
+          </button>
         </div>
       )}
 
       {/* Detected colors */}
       {imageUrl && (
-        <div style={{ marginTop: 14 }}>
-          <div className="section-label">Detected Colors</div>
+        <div style={{ marginTop: 12 }}>
           {detecting ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
               <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
@@ -189,19 +229,23 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
             type="text"
             placeholder="e.g. Black Nike Hoodie"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={e => { setName(e.target.value); setNameWasEdited(true) }}
           />
         </div>
 
         <div className="field">
           <label>Category</label>
-          <select value={category} onChange={e => setCategory(e.target.value as Category)}>
+          <div className="multi-chips">
             {CATEGORIES.map(c => (
-              <option key={c} value={c}>
-                {c.charAt(0).toUpperCase() + c.slice(1)}
-              </option>
+              <button
+                key={c.id}
+                className={`chip ${category === c.id ? 'active' : ''}`}
+                onClick={() => setCategory(c.id)}
+              >
+                {c.label}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
         <div className="field">
@@ -231,6 +275,89 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
                 {o.charAt(0).toUpperCase() + o.slice(1).replace('-', ' ')}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Fabric / Care Label section */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+          <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Tag size={14} /> Fabric & Care
+          </div>
+
+          {/* Care label photo */}
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+            Snap the care label to save it, and select the fabric types.
+          </p>
+
+          {!labelImageUrl ? (
+            <div className="upload-buttons" style={{ marginBottom: 14 }}>
+              <button className="upload-btn" style={{ padding: '14px 12px' }} onClick={() => labelCameraRef.current?.click()}>
+                <Camera size={22} />
+                <span style={{ fontSize: '0.78rem' }}>Snap Label</span>
+              </button>
+              <button className="upload-btn" style={{ padding: '14px 12px' }} onClick={() => labelGalleryRef.current?.click()}>
+                <ImageIcon size={22} />
+                <span style={{ fontSize: '0.78rem' }}>From Gallery</span>
+              </button>
+              <input
+                ref={labelCameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFile(file, setLabelImageUrl)
+                }}
+              />
+              <input
+                ref={labelGalleryRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (file) handleFile(file, setLabelImageUrl)
+                }}
+              />
+            </div>
+          ) : (
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <img
+                src={labelImageUrl}
+                alt="Care label"
+                style={{
+                  width: '100%',
+                  height: 120,
+                  objectFit: 'cover',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border)',
+                }}
+              />
+              <button
+                className="btn btn-ghost"
+                style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(255,255,255,0.85)', borderRadius: 20, fontSize: '0.75rem' }}
+                onClick={() => setLabelImageUrl('')}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+
+          {/* Fabric chips */}
+          <div className="field">
+            <label>Fabric Type</label>
+            <div className="multi-chips">
+              {ALL_FABRICS.map(f => (
+                <button
+                  key={f}
+                  className={`chip ${fabrics.includes(f) ? 'active' : ''}`}
+                  onClick={() => toggleFabric(f)}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

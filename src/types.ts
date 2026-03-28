@@ -11,6 +11,22 @@ export type Season = 'spring' | 'summer' | 'fall' | 'winter' | 'all'
 
 export type Occasion = 'casual' | 'work' | 'formal' | 'athletic' | 'night-out' | 'date'
 
+export type Fabric =
+  | 'cotton'
+  | 'polyester'
+  | 'nylon'
+  | 'wool'
+  | 'silk'
+  | 'linen'
+  | 'denim'
+  | 'leather'
+  | 'cashmere'
+  | 'rayon'
+  | 'spandex'
+  | 'fleece'
+  | 'velvet'
+  | 'satin'
+
 export interface ClothingItem {
   id: string
   name: string
@@ -20,6 +36,8 @@ export interface ClothingItem {
   season: Season[]
   occasions: Occasion[]
   imageUrl: string
+  labelImageUrl?: string
+  fabrics?: Fabric[]
   brand?: string
   dateAdded: string
   timesWorn: number
