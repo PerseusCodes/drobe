@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Image as ImageIcon, Plus, Loader, Tag } from 'lucide-react'
+import { Camera, Image as ImageIcon, Plus, Loader, Tag, CheckCircle } from 'lucide-react'
 import type { ClothingItem, Category, Season, Occasion, Fabric } from '../types'
 import { detectColors, getPrimaryColor, type DetectedColor } from '../utils/colorDetect'
 import { resizeImage } from '../utils/imageResize'
 import { ALL_FABRICS } from '../utils/careInstructions'
+import { scanLabel } from '../utils/labelOcr'
 
 interface Props {
   onAdd: (item: ClothingItem) => void
@@ -54,6 +55,8 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
   const [fabrics, setFabrics] = useState<Fabric[]>([])
   const [detectedColors, setDetectedColors] = useState<DetectedColor[]>([])
   const [detecting, setDetecting] = useState(false)
+  const [scanningLabel, setScanningLabel] = useState(false)
+  const [labelOcrText, setLabelOcrText] = useState('')
 
   // Auto-detect colors when image changes
   useEffect(() => {
@@ -101,6 +104,35 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
       const raw = reader.result as string
       const compressed = await resizeImage(raw, 400)
       setter(compressed)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleLabelFile = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const raw = reader.result as string
+      // Use higher res for OCR readability
+      const compressed = await resizeImage(raw, 600)
+      setLabelImageUrl(compressed)
+
+      // Run OCR
+      setScanningLabel(true)
+      setLabelOcrText('')
+      try {
+        const result = await scanLabel(compressed)
+        if (result.fabrics.length > 0) {
+          setFabrics(prev => {
+            const combined = new Set([...prev, ...result.fabrics])
+            return Array.from(combined)
+          })
+        }
+        setLabelOcrText(result.rawText)
+      } catch {
+        console.warn('Label OCR failed')
+      } finally {
+        setScanningLabel(false)
+      }
     }
     reader.readAsDataURL(file)
   }
@@ -286,7 +318,7 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
 
           {/* Care label photo */}
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 10 }}>
-            Snap the care label to save it, and select the fabric types.
+            Snap the care label — fabrics will be detected automatically.
           </p>
 
           {!labelImageUrl ? (
@@ -307,7 +339,7 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
                 style={{ display: 'none' }}
                 onChange={e => {
                   const file = e.target.files?.[0]
-                  if (file) handleFile(file, setLabelImageUrl)
+                  if (file) handleLabelFile(file)
                 }}
               />
               <input
@@ -317,30 +349,49 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
                 style={{ display: 'none' }}
                 onChange={e => {
                   const file = e.target.files?.[0]
-                  if (file) handleFile(file, setLabelImageUrl)
+                  if (file) handleLabelFile(file)
                 }}
               />
             </div>
           ) : (
-            <div style={{ position: 'relative', marginBottom: 14 }}>
-              <img
-                src={labelImageUrl}
-                alt="Care label"
-                style={{
-                  width: '100%',
-                  height: 120,
-                  objectFit: 'cover',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border)',
-                }}
-              />
-              <button
-                className="btn btn-ghost"
-                style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(255,255,255,0.85)', borderRadius: 20, fontSize: '0.75rem' }}
-                onClick={() => setLabelImageUrl('')}
-              >
-                Remove
-              </button>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={labelImageUrl}
+                  alt="Care label"
+                  style={{
+                    width: '100%',
+                    height: 120,
+                    objectFit: 'cover',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border)',
+                  }}
+                />
+                <button
+                  className="btn btn-ghost"
+                  style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(255,255,255,0.85)', borderRadius: 20, fontSize: '0.75rem' }}
+                  onClick={() => { setLabelImageUrl(''); setLabelOcrText('') }}
+                >
+                  Remove
+                </button>
+              </div>
+
+              {/* OCR status */}
+              {scanningLabel ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  Reading label...
+                </div>
+              ) : labelOcrText ? (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: '0.82rem', color: 'var(--success)' }}>
+                  <CheckCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
+                    {fabrics.length > 0
+                      ? `Detected: ${fabrics.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ')}`
+                      : 'No fabrics recognized — select manually below'}
+                  </span>
+                </div>
+              ) : null}
             </div>
           )}
 
