@@ -22,11 +22,20 @@ export function useWardrobe() {
   )
 
   useEffect(() => {
-    localStorage.setItem(ITEMS_KEY, JSON.stringify(items))
+    try {
+      localStorage.setItem(ITEMS_KEY, JSON.stringify(items))
+    } catch {
+      // QuotaExceededError — silently skip, data stays in memory
+      console.warn('localStorage quota exceeded for items')
+    }
   }, [items])
 
   useEffect(() => {
-    localStorage.setItem(OUTFITS_KEY, JSON.stringify(outfits))
+    try {
+      localStorage.setItem(OUTFITS_KEY, JSON.stringify(outfits))
+    } catch {
+      console.warn('localStorage quota exceeded for outfits')
+    }
   }, [outfits])
 
   const addItem = useCallback((item: ClothingItem) => {

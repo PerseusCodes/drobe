@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'DROBE — Your Digital Wardrobe',
-        short_name: 'DROBE',
-        description: 'Digitize your closet, get AI outfit suggestions, and declutter smarter.',
+        name: 'My Closet',
+        short_name: 'My Closet',
+        description: 'Your digital wardrobe. Scan clothes, get outfit suggestions, and declutter smarter.',
         theme_color: '#FAFAF8',
         background_color: '#FAFAF8',
         display: 'standalone',

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Camera, Image as ImageIcon, Plus, Loader } from 'lucide-react'
 import type { ClothingItem, Category, Season, Occasion } from '../types'
 import { detectColors, getPrimaryColor, type DetectedColor } from '../utils/colorDetect'
+import { resizeImage } from '../utils/imageResize'
 
 interface Props {
   onAdd: (item: ClothingItem) => void
@@ -62,7 +63,12 @@ export default function ScanPage({ onAdd, onNavigate }: Props) {
 
   const handleFile = (file: File) => {
     const reader = new FileReader()
-    reader.onload = () => setImageUrl(reader.result as string)
+    reader.onload = async () => {
+      const raw = reader.result as string
+      // Resize to 400px max and compress to JPEG to fit in localStorage
+      const compressed = await resizeImage(raw, 400)
+      setImageUrl(compressed)
+    }
     reader.readAsDataURL(file)
   }
 

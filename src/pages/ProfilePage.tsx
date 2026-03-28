@@ -103,7 +103,7 @@ export default function ProfilePage({ items, outfits }: Props) {
             D
           </span>
         </div>
-        <h2 style={{ margin: 0 }}>DROBE</h2>
+        <h2 style={{ margin: 0 }}>My Closet</h2>
         <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
           Your digital wardrobe
         </span>
@@ -169,7 +169,7 @@ export default function ProfilePage({ items, outfits }: Props) {
           opacity: 0.6,
         }}
       >
-        DROBE v1.0 — All data stored locally on your device
+        My Closet v1.0 — All data stored locally on your device
       </p>
     </div>
   )

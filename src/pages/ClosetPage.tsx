@@ -36,9 +36,7 @@ export default function ClosetPage({ items, onToggleFav, onDelete, onLogWear }: 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>
-          <span className="logo-mark">D</span> My Closet
-        </h1>
+        <h1>My Closet</h1>
         <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
           {items.length} items
         </span>
