@@ -1,4 +1,3 @@
-import { Heart, Shirt } from 'lucide-react'
 import type { ClothingItem } from '../types'
 
 interface Props {
@@ -9,29 +8,33 @@ interface Props {
 
 export default function ItemCard({ item, onToggleFav, onClick }: Props) {
   return (
-    <div className="card item-card" onClick={() => onClick(item)}>
-      {item.imageUrl ? (
-        <img className="item-img" src={item.imageUrl} alt={item.name} />
-      ) : (
-        <div className="img-placeholder">
-          <Shirt />
-        </div>
-      )}
-      <button
-        className={`fav-btn ${item.favorite ? 'is-fav' : ''}`}
-        onClick={e => {
-          e.stopPropagation()
-          onToggleFav(item.id)
-        }}
-      >
-        <Heart />
-      </button>
+    <div className="item-card" onClick={() => onClick(item)}>
+      <div className="item-img-wrap">
+        {item.imageUrl ? (
+          <img className="item-img" src={item.imageUrl} alt={item.name} />
+        ) : (
+          <div className="img-placeholder">
+            <span className="material-symbols-outlined">checkroom</span>
+          </div>
+        )}
+        <button
+          className={`fav-btn ${item.favorite ? 'is-fav' : ''}`}
+          onClick={e => {
+            e.stopPropagation()
+            onToggleFav(item.id)
+          }}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={item.favorite ? { fontVariationSettings: "'FILL' 1, 'wght' 300" } : undefined}
+          >
+            favorite
+          </span>
+        </button>
+      </div>
       <div className="item-info">
-        <div className="item-name">{item.name}</div>
-        <div className="item-meta">
-          <span className="color-dot" style={{ background: item.color }} />
-          <span>{item.timesWorn}x worn</span>
-        </div>
+        <h3 className="item-name">{item.name}</h3>
+        <div className="color-dot" style={{ background: item.color }} />
       </div>
     </div>
   )

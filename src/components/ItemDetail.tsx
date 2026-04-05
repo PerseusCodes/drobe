@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { X, Trash2, CheckCircle, Shirt, Tag, Droplets, Wind, Flame, Lightbulb } from 'lucide-react'
 import type { ClothingItem } from '../types'
 import { getCombinedCare } from '../utils/careInstructions'
 
@@ -37,11 +36,11 @@ export default function ItemDetail({ item, onClose, onDelete, onLogWear }: Props
             className="img-placeholder"
             style={{ height: 200, borderRadius: 'var(--radius)', marginBottom: 16 }}
           >
-            <Shirt />
+            <span className="material-symbols-outlined" style={{ fontSize: 40 }}>checkroom</span>
           </div>
         )}
 
-        <h2>{item.name}</h2>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 500 }}>{item.name}</h2>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
           <span className="chip active">{item.category}</span>
@@ -53,14 +52,14 @@ export default function ItemDetail({ item, onClose, onDelete, onLogWear }: Props
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0', color: 'var(--text-muted)', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0', color: 'var(--text-muted)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
           <span className="color-dot" style={{ background: item.color }} />
           <span>{item.colorName}</span>
-          <span style={{ margin: '0 4px' }}>|</span>
+          <span style={{ margin: '0 4px', opacity: 0.3 }}>|</span>
           <span>Worn {item.timesWorn} times</span>
           {item.brand && (
             <>
-              <span style={{ margin: '0 4px' }}>|</span>
+              <span style={{ margin: '0 4px', opacity: 0.3 }}>|</span>
               <span>{item.brand}</span>
             </>
           )}
@@ -70,10 +69,9 @@ export default function ItemDetail({ item, onClose, onDelete, onLogWear }: Props
         {(item.fabrics?.length || item.labelImageUrl) && (
           <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
             <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Tag size={14} /> Fabric & Care
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>label</span> Fabric & Care
             </div>
 
-            {/* Fabric chips */}
             {item.fabrics?.length ? (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 {item.fabrics.map(f => (
@@ -84,29 +82,27 @@ export default function ItemDetail({ item, onClose, onDelete, onLogWear }: Props
               </div>
             ) : null}
 
-            {/* Care instructions */}
             {care && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="gap-card" style={{ padding: 10 }}>
-                  <Droplets size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                <div className="gap-card" style={{ padding: 12 }}>
+                  <span className="material-symbols-outlined">water_drop</span>
                   <p style={{ fontSize: '0.82rem' }}><strong>Wash:</strong> {care.wash}</p>
                 </div>
-                <div className="gap-card" style={{ padding: 10 }}>
-                  <Wind size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                <div className="gap-card" style={{ padding: 12 }}>
+                  <span className="material-symbols-outlined">air</span>
                   <p style={{ fontSize: '0.82rem' }}><strong>Dry:</strong> {care.dry}</p>
                 </div>
-                <div className="gap-card" style={{ padding: 10 }}>
-                  <Flame size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                <div className="gap-card" style={{ padding: 12 }}>
+                  <span className="material-symbols-outlined">local_fire_department</span>
                   <p style={{ fontSize: '0.82rem' }}><strong>Iron:</strong> {care.iron}</p>
                 </div>
-                <div className="gap-card" style={{ padding: 10 }}>
-                  <Lightbulb size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                <div className="gap-card" style={{ padding: 12 }}>
+                  <span className="material-symbols-outlined">lightbulb</span>
                   <p style={{ fontSize: '0.82rem' }}><strong>Tips:</strong> {care.tips}</p>
                 </div>
               </div>
             )}
 
-            {/* Care label image */}
             {item.labelImageUrl && (
               <div style={{ marginTop: 12 }}>
                 <button
@@ -114,7 +110,8 @@ export default function ItemDetail({ item, onClose, onDelete, onLogWear }: Props
                   style={{ fontSize: '0.82rem' }}
                   onClick={() => setShowLabel(!showLabel)}
                 >
-                  <Tag size={14} /> {showLabel ? 'Hide' : 'View'} Care Label Photo
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>label</span>
+                  {showLabel ? 'Hide' : 'View'} Care Label Photo
                 </button>
                 {showLabel && (
                   <img
@@ -137,15 +134,15 @@ export default function ItemDetail({ item, onClose, onDelete, onLogWear }: Props
 
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button className="btn btn-primary btn-full" onClick={() => onLogWear(item.id)}>
-            <CheckCircle size={18} /> Log Wear
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check_circle</span> Log Wear
           </button>
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button className="btn btn-danger btn-full" onClick={() => onDelete(item.id)}>
-            <Trash2 size={18} /> Remove
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span> Remove
           </button>
           <button className="btn btn-secondary btn-full" onClick={onClose}>
-            <X size={18} /> Close
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span> Close
           </button>
         </div>
       </div>

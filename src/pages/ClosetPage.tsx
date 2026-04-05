@@ -1,14 +1,11 @@
 import { useState } from 'react'
-import { Search } from 'lucide-react'
 import type { ClothingItem, Category } from '../types'
 import ItemCard from '../components/ItemCard'
 import ItemDetail from '../components/ItemDetail'
+import { useToggleFavorite, useDeleteGarment, useLogWear } from '../hooks/useGarments'
 
 interface Props {
   items: ClothingItem[]
-  onToggleFav: (id: string) => void
-  onDelete: (id: string) => void
-  onLogWear: (id: string) => void
 }
 
 const categories: { id: Category | 'all'; label: string }[] = [
@@ -22,7 +19,10 @@ const categories: { id: Category | 'all'; label: string }[] = [
   { id: 'activewear', label: 'Active' },
 ]
 
-export default function ClosetPage({ items, onToggleFav, onDelete, onLogWear }: Props) {
+export default function ClosetPage({ items }: Props) {
+  const toggleFavorite = useToggleFavorite()
+  const deleteGarment = useDeleteGarment()
+  const logWear = useLogWear()
   const [filter, setFilter] = useState<Category | 'all'>('all')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<ClothingItem | null>(null)
@@ -35,74 +35,72 @@ export default function ClosetPage({ items, onToggleFav, onDelete, onLogWear }: 
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>My Closet</h1>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+      {/* Header */}
+      <section style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 200, fontStyle: 'italic', letterSpacing: '-0.01em' }}>
+          My Closet
+        </h1>
+        <span style={{
+          fontSize: '0.6rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          color: 'var(--text-secondary)',
+        }}>
           {items.length} items
         </span>
-      </div>
+      </section>
 
       {/* Search */}
-      <div style={{ position: 'relative', marginBottom: 14 }}>
-        <Search
-          size={18}
-          style={{
-            position: 'absolute',
-            left: 12,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'var(--text-muted)',
-          }}
-        />
-        <input
-          type="text"
-          placeholder="Search your wardrobe..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '11px 14px 11px 38px',
-            background: 'var(--bg-input)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--text-bright)',
-            fontSize: '0.9rem',
-          }}
-        />
-      </div>
+      <section style={{ marginBottom: 24 }}>
+        <div style={{ position: 'relative' }}>
+          <span
+            className="material-symbols-outlined"
+            style={{
+              position: 'absolute',
+              left: 16,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: 20,
+              color: 'var(--text-muted)',
+            }}
+          >
+            search
+          </span>
+          <input
+            type="text"
+            placeholder="Search your archive"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '16px 16px 16px 48px',
+              background: 'var(--bg-card)',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-bright)',
+              fontSize: '0.88rem',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'box-shadow 0.2s',
+            }}
+          />
+        </div>
+      </section>
 
       {/* Category filter */}
-      <div className="chip-row" style={{ marginBottom: 16 }}>
-        {categories.map(c => (
-          <button
-            key={c.id}
-            className={`chip ${filter === c.id ? 'active' : ''}`}
-            onClick={() => setFilter(c.id)}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Stats */}
-      {items.length > 0 && (
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="stat-value">{items.length}</div>
-            <div className="stat-label">Items</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">{items.filter(i => i.favorite).length}</div>
-            <div className="stat-label">Favorites</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">
-              {items.reduce((sum, i) => sum + i.timesWorn, 0)}
-            </div>
-            <div className="stat-label">Wears</div>
-          </div>
+      <section style={{ marginBottom: 32 }}>
+        <div className="chip-row">
+          {categories.map(c => (
+            <button
+              key={c.id}
+              className={`chip ${filter === c.id ? 'active' : ''}`}
+              onClick={() => setFilter(c.id)}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
-      )}
+      </section>
 
       {/* Grid */}
       {filtered.length > 0 ? (
@@ -111,15 +109,18 @@ export default function ClosetPage({ items, onToggleFav, onDelete, onLogWear }: 
             <ItemCard
               key={item.id}
               item={item}
-              onToggleFav={onToggleFav}
+              onToggleFav={id => {
+                const garment = items.find(i => i.id === id)
+                if (garment) toggleFavorite.mutate({ id, currentValue: garment.favorite })
+              }}
               onClick={setSelected}
             />
           ))}
         </div>
       ) : (
         <div className="empty-state">
-          <Search />
-          <h3>{items.length === 0 ? 'Your closet is empty' : 'No matches'}</h3>
+          <span className="material-symbols-outlined">search</span>
+          <h3 style={{ fontWeight: 500 }}>{items.length === 0 ? 'Your closet is empty' : 'No matches'}</h3>
           <p>
             {items.length === 0
               ? 'Tap the scan button below to add your first item'
@@ -133,10 +134,13 @@ export default function ClosetPage({ items, onToggleFav, onDelete, onLogWear }: 
           item={selected}
           onClose={() => setSelected(null)}
           onDelete={id => {
-            onDelete(id)
+            deleteGarment.mutate(id)
             setSelected(null)
           }}
-          onLogWear={onLogWear}
+          onLogWear={id => {
+            const garment = items.find(i => i.id === id)
+            if (garment) logWear.mutate({ id, currentTimesWorn: garment.timesWorn })
+          }}
         />
       )}
     </div>

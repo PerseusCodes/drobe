@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { Sun, Plus, Sparkles, Shirt, ArrowRight, Haze } from 'lucide-react'
 import type { ClothingItem, Outfit, Page } from '../types'
 import { generateOutfits } from '../utils/outfitEngine'
 
@@ -24,297 +23,196 @@ function getGreeting(): string {
   return 'Good evening'
 }
 
-function getSeasonEmoji(s: string): string {
-  switch (s) {
-    case 'spring': return '\u{1F338}'
-    case 'summer': return '\u{2600}\u{FE0F}'
-    case 'fall': return '\u{1F342}'
-    case 'winter': return '\u{2744}\u{FE0F}'
-    default: return ''
-  }
-}
-
 export default function TodayPage({ items, savedOutfits, onNavigate }: Props) {
   const season = getCurrentSeason()
   const greeting = getGreeting()
 
-  // Generate a daily outfit suggestion
   const dailyOutfit = useMemo(() => {
     const outfits = generateOutfits(items, 'casual', season, 3)
-    // Pick one based on the day so it's stable for the whole day
     const dayIndex = new Date().getDate() % Math.max(outfits.length, 1)
     return outfits[dayIndex] || null
   }, [items, season])
 
   const getItem = (id: string) => items.find(i => i.id === id)
 
-  const recentItems = items.slice(0, 4)
+  const wardrobeScore = items.length > 0
+    ? Math.round((items.filter(i => i.timesWorn > 0).length / items.length) * 100)
+    : 0
 
   return (
     <div className="page">
       {/* Greeting */}
-      <div style={{ paddingTop: 8, marginBottom: 24 }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 4 }}>
-          {getSeasonEmoji(season)} {season.charAt(0).toUpperCase() + season.slice(1)}
+      <section style={{ marginBottom: 40 }}>
+        <p style={{
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.15em',
+          color: 'var(--text)',
+          opacity: 0.6,
+          marginBottom: 4,
+        }}>
+          {season.charAt(0).toUpperCase() + season.slice(1)}
         </p>
-        <h1 style={{ fontSize: '1.6rem', margin: 0 }}>{greeting}</h1>
-      </div>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 300, letterSpacing: '-0.01em' }}>
+          {greeting}
+        </h1>
+      </section>
 
-      {/* Quick stats */}
-      <div className="stats-row">
-        <div className="stat-card">
-          <div className="stat-value">{items.length}</div>
-          <div className="stat-label">Items</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{savedOutfits.length}</div>
-          <div className="stat-label">Outfits</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{items.reduce((s, i) => s + i.timesWorn, 0)}</div>
-          <div className="stat-label">Wears</div>
-        </div>
-      </div>
-
-      {/* Daily outfit suggestion */}
+      {/* Today's Outfit */}
       {dailyOutfit && items.length >= 2 ? (
-        <div style={{ marginBottom: 20 }}>
-          <div className="section-label">Today's Outfit</div>
-          <div className="card" style={{ padding: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <Sparkles size={18} style={{ color: 'var(--accent)' }} />
-              <span style={{ fontWeight: 600, color: 'var(--text-bright)', fontSize: '0.95rem' }}>
-                {dailyOutfit.name}
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+        <section style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <span className="section-label" style={{ margin: 0 }}>Today's Outfit</span>
+          </div>
+          <div style={{
+            background: 'var(--bg-card)',
+            borderRadius: 'var(--radius-xl)',
+            padding: 24,
+            boxShadow: 'var(--shadow)',
+          }}>
+            <div className="hide-scrollbar" style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
               {dailyOutfit.items.map(id => {
                 const item = getItem(id)
                 if (!item) return null
-                return item.imageUrl ? (
-                  <img
-                    key={id}
-                    src={item.imageUrl}
-                    alt={item.name}
-                    style={{
-                      width: 72,
-                      height: 96,
-                      borderRadius: 'var(--radius-xs)',
-                      objectFit: 'cover',
-                      border: '1px solid var(--border)',
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div
-                    key={id}
-                    style={{
-                      width: 72,
-                      height: 96,
-                      borderRadius: 'var(--radius-xs)',
-                      background: item.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid var(--border)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Shirt size={20} style={{ color: 'rgba(255,255,255,0.7)' }} />
+                return (
+                  <div key={id} style={{ minWidth: 120, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{
+                      aspectRatio: '3/4',
+                      borderRadius: 'var(--radius-sm)',
+                      overflow: 'hidden',
+                      background: 'var(--bg-surface-low)',
+                    }}>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          background: item.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <span className="material-symbols-outlined" style={{ color: 'rgba(255,255,255,0.6)' }}>checkroom</span>
+                        </div>
+                      )}
+                    </div>
+                    <p style={{
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: 'var(--text)',
+                      textAlign: 'center',
+                    }}>
+                      {item.name}
+                    </p>
                   </div>
                 )
               })}
             </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              <span className="chip active">{dailyOutfit.occasion}</span>
-              <span className="chip">{dailyOutfit.season}</span>
-            </div>
           </div>
-        </div>
+        </section>
       ) : items.length === 0 ? (
-        <div className="card" style={{ padding: 24, textAlign: 'center', marginBottom: 20 }}>
-          <Haze size={40} style={{ color: 'var(--text-muted)', opacity: 0.4, margin: '0 auto 12px' }} />
-          <h3 style={{ marginBottom: 6 }}>Your closet is empty</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 16 }}>
+        <div style={{
+          background: 'var(--bg-card)',
+          borderRadius: 'var(--radius-xl)',
+          padding: 32,
+          textAlign: 'center',
+          marginBottom: 32,
+          boxShadow: 'var(--shadow)',
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 48, color: 'var(--text-muted)', opacity: 0.3, marginBottom: 12 }}>checkroom</span>
+          <h3 style={{ marginBottom: 6, fontWeight: 500 }}>Your closet is empty</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 20 }}>
             Start by adding your first clothing item
           </p>
           <button className="btn btn-primary" onClick={() => onNavigate('scan')}>
-            <Plus size={18} /> Add Your First Item
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span> Add Your First Item
           </button>
         </div>
       ) : null}
 
-      {/* Quick actions */}
-      <div className="section-label">Quick Actions</div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-        <button
-          className="card"
-          onClick={() => onNavigate('scan')}
-          style={{
-            flex: 1,
-            padding: '18px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 8,
-            background: 'var(--bg-card)',
-            cursor: 'pointer',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'var(--accent-dim)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Plus size={22} style={{ color: 'var(--accent)' }} />
+      {/* Stats Bento Grid */}
+      <section style={{ marginBottom: 32 }}>
+        <div className="stats-row">
+          <div className="stat-card">
+            <span className="stat-label">Total Items</span>
+            <span className="stat-value">{items.length}</span>
           </div>
-          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-bright)' }}>
-            Add Item
-          </span>
-        </button>
-
-        <button
-          className="card"
-          onClick={() => onNavigate('outfits')}
-          style={{
-            flex: 1,
-            padding: '18px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 8,
-            background: 'var(--bg-card)',
-            cursor: 'pointer',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'var(--accent-dim)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Sparkles size={22} style={{ color: 'var(--accent)' }} />
+          <div className="stat-card">
+            <span className="stat-label">Outfits</span>
+            <span className="stat-value">{savedOutfits.length}</span>
           </div>
-          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-bright)' }}>
-            Get Outfits
-          </span>
-        </button>
-
-        <button
-          className="card"
-          onClick={() => onNavigate('closet')}
-          style={{
-            flex: 1,
-            padding: '18px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 8,
-            background: 'var(--bg-card)',
-            cursor: 'pointer',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'var(--accent-dim)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Shirt size={22} style={{ color: 'var(--accent)' }} />
-          </div>
-          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-bright)' }}>
-            My Closet
-          </span>
-        </button>
-      </div>
-
-      {/* Recently added */}
-      {recentItems.length > 0 && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span className="section-label" style={{ margin: 0 }}>Recently Added</span>
-            <button
-              className="btn btn-ghost"
-              style={{ fontSize: '0.78rem', padding: '4px 8px' }}
-              onClick={() => onNavigate('closet')}
-            >
-              View All <ArrowRight size={14} />
-            </button>
-          </div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
-            {recentItems.map(item => (
-              <div
-                key={item.id}
-                className="card"
-                style={{ flexShrink: 0, width: 120 }}
-                onClick={() => onNavigate('closet')}
+          <div className="stat-card wide">
+            <div>
+              <span className="stat-label" style={{ color: 'var(--text-secondary)' }}>Wardrobe Score</span>
+              <span className="stat-value">{wardrobeScore}%</span>
+            </div>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              border: '3px solid rgba(136, 77, 39, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <span
+                className="material-symbols-outlined"
+                style={{ color: 'var(--accent)', fontVariationSettings: "'FILL' 1, 'wght' 300" }}
               >
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    style={{ width: '100%', height: 140, objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{
-                    width: '100%',
-                    height: 140,
-                    background: 'var(--bg-elevated)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <Shirt size={24} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-                  </div>
-                )}
-                <div style={{ padding: '8px 10px' }}>
-                  <div style={{
-                    fontSize: '0.78rem',
-                    fontWeight: 500,
-                    color: 'var(--text-bright)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
-                    {item.name}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                    <span className="color-dot" style={{ background: item.color, width: 10, height: 10 }} />
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      {item.colorName.split(',')[0]}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                auto_awesome
+              </span>
+            </div>
           </div>
-        </>
-      )}
-
-      {/* Seasonal tip */}
-      <div className="card" style={{ padding: 16, marginTop: 16, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <Sun size={20} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
-        <div>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text)', lineHeight: 1.5 }}>
-            {season === 'winter' && "Layer up! Check your outerwear section for cold-weather combos."}
-            {season === 'spring' && "Transitional weather — light layers and versatile pieces work best."}
-            {season === 'summer' && "Keep it light and breathable. Time to rotate in your summer pieces."}
-            {season === 'fall' && "Perfect layering season. Mix outerwear with your lighter tops."}
-          </p>
         </div>
+      </section>
+
+      {/* Action Buttons */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+        <button
+          className="btn btn-primary btn-full"
+          style={{ height: 56, borderRadius: 'var(--radius-sm)', fontSize: '0.82rem' }}
+          onClick={() => onNavigate('scan')}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add_circle</span>
+          Scan New Item
+        </button>
+        <button
+          className="btn btn-secondary btn-full"
+          style={{ height: 56, borderRadius: 'var(--radius-sm)', fontSize: '0.82rem' }}
+          onClick={() => onNavigate('closet')}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>checkroom</span>
+          Browse Closet
+        </button>
+      </section>
+
+      {/* Seasonal Tip */}
+      <div style={{
+        background: 'rgba(136, 77, 39, 0.05)',
+        borderRadius: 'var(--radius-2xl)',
+        padding: 28,
+        border: '1px solid rgba(136, 77, 39, 0.1)',
+        textAlign: 'center',
+      }}>
+        <span
+          className="material-symbols-outlined"
+          style={{ fontSize: 28, color: 'var(--accent)', marginBottom: 12, fontVariationSettings: "'FILL' 1, 'wght' 300" }}
+        >
+          lightbulb
+        </span>
+        <p style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--accent)', marginBottom: 8 }}>
+          Seasonal Tip
+        </p>
+        <p style={{ color: 'var(--text)', fontWeight: 300, lineHeight: 1.6, fontSize: '0.92rem' }}>
+          {season === 'winter' && "Layer up! Check your outerwear section for cold-weather combos."}
+          {season === 'spring' && "Transitional weather — light layers and versatile pieces work best."}
+          {season === 'summer' && "Keep it light and breathable. Time to rotate in your summer pieces."}
+          {season === 'fall' && "Perfect layering season. Mix outerwear with your lighter tops."}
+        </p>
       </div>
     </div>
   )

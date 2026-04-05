@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { Page } from './types'
-import { useWardrobe } from './hooks/useWardrobe'
+import { useGarments } from './hooks/useGarments'
+import { useOutfits } from './hooks/useOutfits'
+import { useAuth } from './lib/auth'
 import BottomNav from './components/BottomNav'
 import TodayPage from './pages/TodayPage'
 import ClosetPage from './pages/ClosetPage'
@@ -8,50 +10,80 @@ import ScanPage from './pages/ScanPage'
 import OutfitsPage from './pages/OutfitsPage'
 import DeclutterPage from './pages/DeclutterPage'
 import ProfilePage from './pages/ProfilePage'
+import AuthPage from './pages/AuthPage'
 
 export default function App() {
   const [page, setPage] = useState<Page>('today')
-  const wardrobe = useWardrobe()
+  const { user } = useAuth()
+  const { data: items = [], isLoading } = useGarments()
+  const { data: outfits = [] } = useOutfits()
+
+  if (!user) {
+    return <AuthPage />
+  }
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100dvh',
+      }}>
+        <span
+          className="material-symbols-outlined"
+          style={{
+            fontSize: 40,
+            color: 'var(--accent)',
+            animation: 'spin 1s linear infinite',
+          }}
+        >
+          progress_activity
+        </span>
+      </div>
+    )
+  }
 
   return (
     <>
+      {/* Fixed Top Header */}
+      <header className="top-header">
+        <div className="top-header-inner">
+          <span className="top-header-title">DROBE</span>
+        </div>
+      </header>
+
       {page === 'today' && (
         <TodayPage
-          items={wardrobe.items}
-          savedOutfits={wardrobe.outfits}
+          items={items}
+          savedOutfits={outfits}
           onNavigate={setPage}
         />
       )}
       {page === 'closet' && (
         <ClosetPage
-          items={wardrobe.items}
-          onToggleFav={wardrobe.toggleFavorite}
-          onDelete={wardrobe.deleteItem}
-          onLogWear={wardrobe.logWear}
+          items={items}
         />
       )}
       {page === 'outfits' && (
         <OutfitsPage
-          items={wardrobe.items}
-          savedOutfits={wardrobe.outfits}
-          onSave={wardrobe.saveOutfit}
-          onDeleteOutfit={wardrobe.deleteOutfit}
+          items={items}
+          savedOutfits={outfits}
         />
       )}
       {page === 'scan' && (
-        <ScanPage onAdd={wardrobe.addItem} onNavigate={setPage} />
+        <ScanPage onNavigate={setPage} />
       )}
       {page === 'declutter' && (
         <DeclutterPage
-          items={wardrobe.items}
-          savedOutfits={wardrobe.outfits}
-          onDelete={wardrobe.deleteItem}
+          items={items}
+          savedOutfits={outfits}
         />
       )}
       {page === 'profile' && (
         <ProfilePage
-          items={wardrobe.items}
-          outfits={wardrobe.outfits}
+          items={items}
+          outfits={outfits}
           onNavigate={setPage}
         />
       )}

@@ -1,19 +1,19 @@
 import { useState, useMemo } from 'react'
-import { Sparkles, Bookmark, Shirt, RefreshCw } from 'lucide-react'
 import type { ClothingItem, Outfit, Occasion, Season } from '../types'
 import { generateOutfits } from '../utils/outfitEngine'
+import { useSaveOutfit, useDeleteOutfit } from '../hooks/useOutfits'
 
 interface Props {
   items: ClothingItem[]
   savedOutfits: Outfit[]
-  onSave: (outfit: Outfit) => void
-  onDeleteOutfit: (id: string) => void
 }
 
 const OCCASIONS: (Occasion | 'any')[] = ['any', 'casual', 'work', 'formal', 'athletic', 'night-out', 'date']
 const SEASONS: (Season | 'any')[] = ['any', 'spring', 'summer', 'fall', 'winter']
 
-export default function OutfitsPage({ items, savedOutfits, onSave, onDeleteOutfit }: Props) {
+export default function OutfitsPage({ items, savedOutfits }: Props) {
+  const saveOutfit = useSaveOutfit()
+  const deleteOutfit = useDeleteOutfit()
   const [occasion, setOccasion] = useState<Occasion | 'any'>('any')
   const [season, setSeason] = useState<Season | 'any'>('any')
   const [tab, setTab] = useState<'generate' | 'saved'>('generate')
@@ -28,51 +28,105 @@ export default function OutfitsPage({ items, savedOutfits, onSave, onDeleteOutfi
   const getItem = (id: string) => items.find(i => i.id === id)
 
   const renderOutfitCard = (outfit: Outfit, isSaved: boolean) => (
-    <div className="card outfit-card" key={outfit.id}>
-      <div className="outfit-name">{outfit.name}</div>
-      <div className="outfit-tags">
-        <span className="chip active">{outfit.occasion}</span>
-        <span className="chip">{outfit.season}</span>
-      </div>
-      <div className="outfit-items">
-        {outfit.items.map(id => {
-          const item = getItem(id)
+    <div className="outfit-card" key={outfit.id}>
+      {/* Item thumbnails */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, overflow: 'hidden' }}>
+        {/* Main item (larger) */}
+        {outfit.items[0] && (() => {
+          const item = getItem(outfit.items[0])
           return item ? (
-            item.imageUrl ? (
-              <img
-                key={id}
-                className="outfit-thumb"
-                src={item.imageUrl}
-                alt={item.name}
-              />
-            ) : (
-              <div
-                key={id}
-                className="outfit-thumb"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: item.color,
-                }}
-              >
-                <Shirt size={20} style={{ color: 'rgba(255,255,255,0.7)' }} />
-              </div>
-            )
+            <div style={{ flex: 1, aspectRatio: '3/4', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg-surface-low)' }}>
+              {item.imageUrl ? (
+                <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="material-symbols-outlined" style={{ color: 'rgba(255,255,255,0.6)' }}>checkroom</span>
+                </div>
+              )}
+            </div>
           ) : null
-        })}
+        })()}
+        {/* Secondary items (stacked) */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {outfit.items.slice(1, 3).map(id => {
+            const item = getItem(id)
+            return item ? (
+              <div key={id} style={{ flex: 1, borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg-surface-low)' }}>
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'rgba(255,255,255,0.6)' }}>checkroom</span>
+                  </div>
+                )}
+              </div>
+            ) : null
+          })}
+        </div>
       </div>
-      <div className="outfit-actions">
+
+      {/* Tags + Save */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{
+            display: 'inline-flex',
+            padding: '5px 12px',
+            background: 'var(--bg-elevated)',
+            borderRadius: 9999,
+            fontSize: '0.6rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: 'var(--text-secondary)',
+            width: 'fit-content',
+          }}>
+            {outfit.occasion}
+          </span>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            {outfit.name}
+          </p>
+        </div>
         {isSaved ? (
-          <button className="btn btn-danger" onClick={() => onDeleteOutfit(outfit.id)}>
-            Remove
+          <button
+            onClick={() => deleteOutfit.mutate(outfit.id)}
+            style={{
+              width: 48,
+              height: 48,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--danger-bg)',
+              color: 'var(--danger)',
+              borderRadius: 'var(--radius)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <span className="material-symbols-outlined">delete</span>
           </button>
         ) : (
           <button
-            className="btn btn-primary"
-            onClick={() => onSave({ ...outfit, saved: true })}
+            onClick={() => saveOutfit.mutate({
+              name: outfit.name,
+              occasion: outfit.occasion,
+              season: outfit.season,
+              itemIds: outfit.items,
+            })}
+            style={{
+              width: 48,
+              height: 48,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
+              color: 'white',
+              borderRadius: 'var(--radius)',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(136, 77, 39, 0.25)',
+            }}
           >
-            <Bookmark size={16} /> Save
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1, 'wght' 300" }}>bookmark</span>
           </button>
         )}
       </div>
@@ -81,27 +135,25 @@ export default function OutfitsPage({ items, savedOutfits, onSave, onDeleteOutfi
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1>
-          <Sparkles size={24} style={{ color: 'var(--accent)' }} /> Outfits
-        </h1>
-      </div>
+      {/* Header */}
+      <section style={{ marginBottom: 24 }}>
+        <p className="section-label" style={{ marginBottom: 4 }}>Curated for You</p>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 300 }}>Outfits</h1>
+      </section>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      {/* Tab Toggle */}
+      <div className="tab-toggle">
         <button
-          className={`chip ${tab === 'generate' ? 'active' : ''}`}
+          className={tab === 'generate' ? 'active' : ''}
           onClick={() => setTab('generate')}
-          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
         >
-          <Sparkles size={14} /> Suggestions
+          Suggested
         </button>
         <button
-          className={`chip ${tab === 'saved' ? 'active' : ''}`}
+          className={tab === 'saved' ? 'active' : ''}
           onClick={() => setTab('saved')}
-          style={{ padding: '8px 16px', fontSize: '0.85rem' }}
         >
-          <Bookmark size={14} /> Saved ({savedOutfits.length})
+          Saved ({savedOutfits.length})
         </button>
       </div>
 
@@ -109,7 +161,7 @@ export default function OutfitsPage({ items, savedOutfits, onSave, onDeleteOutfi
         <>
           {/* Filters */}
           <div className="section-label">Occasion</div>
-          <div className="chip-row" style={{ marginBottom: 12 }}>
+          <div className="chip-row" style={{ marginBottom: 16 }}>
             {OCCASIONS.map(o => (
               <button
                 key={o}
@@ -122,7 +174,7 @@ export default function OutfitsPage({ items, savedOutfits, onSave, onDeleteOutfi
           </div>
 
           <div className="section-label">Season</div>
-          <div className="chip-row" style={{ marginBottom: 16 }}>
+          <div className="chip-row" style={{ marginBottom: 20 }}>
             {SEASONS.map(s => (
               <button
                 key={s}
@@ -136,36 +188,34 @@ export default function OutfitsPage({ items, savedOutfits, onSave, onDeleteOutfi
 
           <button
             className="btn btn-secondary btn-full"
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 24, height: 48 }}
             onClick={() => setSeed(s => s + 1)}
           >
-            <RefreshCw size={16} /> Regenerate
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>refresh</span> Regenerate
           </button>
 
           {generated.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {generated.map(o => renderOutfitCard(o, false))}
             </div>
           ) : (
             <div className="empty-state">
-              <Sparkles />
-              <h3>Not enough items</h3>
-              <p>
-                Add more clothing items to your closet to generate outfit combinations
-              </p>
+              <span className="material-symbols-outlined">auto_awesome</span>
+              <h3 style={{ fontWeight: 500 }}>Not enough items</h3>
+              <p>Add more clothing items to your closet to generate outfit combinations</p>
             </div>
           )}
         </>
       ) : (
         <>
           {savedOutfits.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {savedOutfits.map(o => renderOutfitCard(o, true))}
             </div>
           ) : (
             <div className="empty-state">
-              <Bookmark />
-              <h3>No saved outfits</h3>
+              <span className="material-symbols-outlined">bookmark</span>
+              <h3 style={{ fontWeight: 500 }}>No saved outfits</h3>
               <p>Generate outfits and save the ones you like</p>
             </div>
           )}
